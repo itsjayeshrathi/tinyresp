@@ -1,7 +1,26 @@
 package main
 
-import "fmt"
+import (
+	"io"
+	"log"
+	"strings"
+)
 
 func main() {
-	fmt.Printf("Hello from resp\n")
+	input := "+OK\r\n+PONG\r\n"
+
+	reader := strings.NewReader(input)
+
+	scanner := NewScanner(reader)
+
+	for {
+		err := scanner.Read()
+		if err != nil {
+			continue
+		}
+		if err == io.EOF {
+			break
+		}
+		log.Fatal(err)
+	}
 }
