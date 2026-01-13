@@ -1,3 +1,0 @@
-# RESP DOCS
-
-## Introduction

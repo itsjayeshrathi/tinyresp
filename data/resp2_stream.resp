@@ -1,0 +1,50 @@
++OK\r\n
++PONG\r\n
+-ERR error\r\n
+-ERR wrongtype\r\n
+:0\r\n
+:1\r\n
+:-1\r\n
+:42\r\n
+:1000\r\n
+$0\r\n\r\n
+$5\r\nhello\r\n
+$11\r\nhello world\r\n
+$-1\r\n
+*0\r\n
+*-1\r\n
+*2\r\n
+$3\r\nfoo\r\n
+$3\r\nbar\r\n
+*3\r\n
+:1\r\n
+:2\r\n
+:3\r\n
+*2\r\n
+*2\r\n
++OK\r\n
+-ERR inner\r\n
+$5\r\nvalue\r\n
+*4\r\n
+$3\r\none\r\n
+$3\r\ntwo\r\n
+$5\r\nthree\r\n
+$4\r\nfour\r\n
+*3\r\n
+*3\r\n
+:10\r\n
+:20\r\n
+:30\r\n
+*2\r\n
+$4\r\nname\r\n
+$4\r\njohn\r\n
+*1\r\n
+*1\r\n
+*1\r\n
+:999\r\n
+*5\r\n
+$1\r\na\r\n
+$1\r\nb\r\n
+$1\r\nc\r\n
+$1\r\nd\r\n
+$1\r\ne\r\n
