@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	input := "+OK\r\n+PONG\r\n"
+	input := "+OK\r\n+PONG\r\n-ERR unknown command 'asdf'\r\n:0\r\n:10000\r\n$5\r\nhello\r\n"
 
 	reader := strings.NewReader(input)
 
@@ -15,12 +15,11 @@ func main() {
 
 	for {
 		err := scanner.Read()
-		if err != nil {
-			continue
-		}
 		if err == io.EOF {
 			break
 		}
-		log.Fatal(err)
+		if err != nil {
+			log.Fatal(err)
+		}
 	}
 }
