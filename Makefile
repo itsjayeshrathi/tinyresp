@@ -2,12 +2,16 @@
 
 GO      := go
 PKG     := ./...
+CMD     := ./cmd/tinyresp
 BINARY  := tinyresp
 
-.PHONY: build test fmt lint clean
+.PHONY: run build test fmt lint clean
+
+run:
+	$(GO) run $(CMD)
 
 build:
-	$(GO) build ./...
+	$(GO) build -o $(BINARY) $(CMD)
 
 test:
 	$(GO) test $(PKG)
@@ -21,4 +25,5 @@ lint:
 	golangci-lint run
 
 clean:
+	rm -f $(BINARY)
 	$(GO) clean

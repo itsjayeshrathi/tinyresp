@@ -4,7 +4,8 @@ import (
 	"io"
 	"log"
 	"strings"
-	 "github.com/itsjayeshrathi/tinyresp/internal/resp"
+
+	"github.com/itsjayeshrathi/tinyresp/internal/resp"
 )
 
 func main() {
@@ -12,7 +13,7 @@ func main() {
 
 	reader := strings.NewReader(input)
 
-	scanner := NewScanner(reader)
+	scanner := resp.NewScanner(reader)
 
 	for {
 		err := scanner.Read()
