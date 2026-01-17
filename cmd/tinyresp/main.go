@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	input := "+OK\r\n+PONG\r\n-ERR unknown command 'asdf'\r\n:0\r\n:10000\r\n$5\r\nhello\r\n"
+	input := "+OK\r\n+PONG\r\n-ERR unknown command 'asdf'\r\n:0\r\n:-10000\r\n_af\r\n"
 
 	reader := strings.NewReader(input)
 
