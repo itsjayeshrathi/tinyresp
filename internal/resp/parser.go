@@ -4,6 +4,8 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"math/big"
+	"strconv"
 )
 
 type Scanner struct {
@@ -14,37 +16,142 @@ func NewScanner(r io.Reader) *Scanner {
 	return &Scanner{r: bufio.NewReader(r)}
 }
 
-func (s *Scanner) Read() error {
+func (s *Scanner) ReadLine() (string, error) {
+	line, err := s.r.ReadString('\n')
+	if err != nil {
+		return "", err
+	}
+	if len(line) < 2 || line[len(line)-2] != '\r' {
+		return "", fmt.Errorf("resp: invalid line coding")
+	}
+	return line[:len(line)-2], nil
+}
+
+func (s *Scanner) ReadSimpleString() (string, error) {
+	value, err := s.ReadLine()
+	if err != nil {
+		return "", err
+	}
+	return value, nil
+}
+
+func (s *Scanner) ReadSimpleError() (string, error) {
+	value, err := s.ReadLine()
+	if err != nil {
+		return "", err
+	}
+	return value, nil
+}
+
+func (s *Scanner) ReadInteger() (int64, error) {
+	value, err := s.ReadLine()
+	if err != nil {
+		return 0, err
+	}
+	return strconv.ParseInt(value, 10, 64)
+}
+
+func (s *Scanner) ReadNull() (string, error) {
+	value, err := s.ReadLine()
+	if err != nil {
+		return "", err
+	}
+	if len(value) > 0 {
+		return "", err
+	}
+	return "", nil
+}
+
+func (s *Scanner) ReadDouble() (float64, error) {
+	value, err := s.ReadLine()
+	if err != nil {
+		return 0, err
+	}
+	return strconv.ParseFloat(value, 64)
+}
+
+func (s *Scanner) ReadBigNumber() (*big.Int, error) {
+	value, err := s.ReadLine()
+	if err != nil {
+		return nil, err
+	}
+	n, ok := new(big.Int).SetString(value, 10)
+	if !ok {
+		return nil, fmt.Errorf("resp: invalid bignumber")
+	}
+	return n, nil
+}
+
+func (s *Scanner) ReadBoolean() (bool, error) {
+	value, err := s.ReadLine()
+	if err != nil {
+		return false, err
+	}
+	if len(value) != 1 {
+		return false, fmt.Errorf("resp: invalid boolean")
+	}
+	switch value[0] {
+	case 't':
+		return true, nil
+	case 'f':
+		return false, nil
+	default:
+		return false, fmt.Errorf("resp: invalid boolean")
+	}
+}
+
+func (s *Scanner) Read() (any, error) {
 	t, err := s.r.ReadByte()
 
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	switch t {
+
 	// +OK\r\n
 	case '+':
+		return s.ReadSimpleString()
+
 	//-Error message\r\n
 	case '-':
+		return s.ReadSimpleError()
+
 	//:[<+|->]<value>\r\n
 	case ':':
+		return s.ReadInteger()
+
 	//$<length>\r\n<data>\r\n
 	case '$':
+
 	//*<number-of-elements>\r\n<element-1>...<element-n>
 	case '*':
+
 	//_\r\n
 	case '_':
+		return s.ReadNull()
+
 	//#<t|f>\r\n
 	case '#':
+		return s.ReadBoolean()
+
 	//,[<+|->]<integral>[.<fractional>][<E|e>[sign]<exponent>]\r\n
 	case ',':
+		return s.ReadDouble()
+
 	//([+|-]<number>\r\n
 	case '(':
-	case '!':
+		return s.ReadBigNumber()
+
 	//!<length>\r\n<error>\r\n
+	case '!':
+
+	// =<length>\r\n<encoding>:<data>\r\n
 	case '=':
+
 	//%<number-of-entries>\r\n<key-1><value-1>...<key-n><value-n>
 	case '%':
+
 	/*|1\r\n
 	    +key-popularity\r\n
 	    %2\r\n
@@ -58,12 +165,16 @@ func (s *Scanner) Read() error {
 	    :2039123\r\n
 	    :9543892\r\n*/
 	case '|':
+
 	//~<number-of-elements>\r\n<element-1>...<element-n>
 	case '~':
+
 	//><number-of-elements>\r\n<element-1>...<element-n>
 	case '>':
+
 	default:
-		return fmt.Errorf("unsupported RESP type: %q", t)
+		return nil, fmt.Errorf("unsupported RESP type: %q", t)
 	}
-	return nil
+
+	return nil, fmt.Errorf("resp: type %q not implemented", t)
 }

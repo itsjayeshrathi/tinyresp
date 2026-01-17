@@ -5,7 +5,7 @@ type RespType byte
 const (
 	// RESP2
 	SimpleString RespType = '+'
-	Error        RespType = '-'
+	SimpleError  RespType = '-'
 	Integer      RespType = ':'
 	BulkString   RespType = '$'
 	Array        RespType = '*'
