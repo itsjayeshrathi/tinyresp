@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"log"
 	"strings"
@@ -16,7 +17,8 @@ func main() {
 	scanner := resp.NewScanner(reader)
 
 	for {
-		err := scanner.Read()
+		any, err := scanner.Read()
+		fmt.Println(any)
 		if err == io.EOF {
 			break
 		}

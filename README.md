@@ -11,4 +11,6 @@ This is not a Redis clone and not a production-ready client — it is a learning
 
 Docs **[RESP](https://redis.io/docs/latest/develop/reference/protocol-spec/)**
 
+Wire Protocol **[Article](https://risingwave.com/blog/understanding-wire-protocol/)**
+
 Handwritten Parsers & Lexers in Go **[Article](https://blog.gopheracademy.com/advent-2014/parsers-lexers/)**
