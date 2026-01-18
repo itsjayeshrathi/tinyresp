@@ -16,7 +16,7 @@ func NewScanner(r io.Reader) *Scanner {
 	return &Scanner{r: bufio.NewReader(r)}
 }
 
-func (s *Scanner) ReadLine() (string, error) {
+func (s *Scanner) readCRLFLine() (string, error) {
 	line, err := s.r.ReadString('\n')
 	if err != nil {
 		return "", err
@@ -27,8 +27,71 @@ func (s *Scanner) ReadLine() (string, error) {
 	return line[:len(line)-2], nil
 }
 
+func (s *Scanner) ReadBulkString() (string, error) {
+	lenStr, err := s.readCRLFLine()
+	if err != nil {
+		return "", err
+	}
+	n, err := strconv.Atoi(lenStr)
+	if err != nil {
+		return "", nil
+	}
+	if n == -1 {
+		return "",nil 
+	}
+	buf := make([]byte,n)
+	_,err = io.ReadFull(s.r,buf)
+	if err != nil{
+		return "",nil 
+	}
+	if _,err := s.readCRLFLine(); err != nil{
+		return "",err
+	}
+	return string(buf), nil
+}
+
+func (s *Scanner) ReadBulkError() (string, error) { 	
+	lenStr, err := s.readCRLFLine()
+		if err != nil {
+			return "", err
+		}
+		n, err := strconv.Atoi(lenStr)
+		if err != nil {
+			return "", nil
+		}	
+		buf := make([]byte,n)
+		_,err = io.ReadFull(s.r,buf)
+		if err != nil{
+			return "",nil 
+		}
+		if _,err := s.readCRLFLine(); err != nil{
+			return "",err
+		}
+		return string(buf), nil
+}
+
+func (s *Scanner) ReadVerbatimString() (string, error) { 
+	lenStr, err := s.readCRLFLine()
+	if err != nil{
+		return "",err 
+	}
+	n,err := strconv.Atoi(lenStr)
+	if err != nil{
+		return "", nil
+	}
+	buf := make([]byte,n)
+	_,err = io.ReadFull(s.r,buf)
+	if err != nil{
+		return "",nil
+	}
+	if _,err :=s.readCRLFLine(); err != nil{
+		return "",err 
+	}
+	return string(buf), nil
+}
+
 func (s *Scanner) ReadSimpleString() (string, error) {
-	value, err := s.ReadLine()
+	value, err := s.readCRLFLine()
 	if err != nil {
 		return "", err
 	}
@@ -36,7 +99,7 @@ func (s *Scanner) ReadSimpleString() (string, error) {
 }
 
 func (s *Scanner) ReadSimpleError() (string, error) {
-	value, err := s.ReadLine()
+	value, err := s.readCRLFLine()
 	if err != nil {
 		return "", err
 	}
@@ -44,26 +107,26 @@ func (s *Scanner) ReadSimpleError() (string, error) {
 }
 
 func (s *Scanner) ReadInteger() (int64, error) {
-	value, err := s.ReadLine()
+	value, err := s.readCRLFLine()
 	if err != nil {
 		return 0, err
 	}
 	return strconv.ParseInt(value, 10, 64)
 }
 
-func (s *Scanner) ReadNull() (string, error) {
-	value, err := s.ReadLine()
+func (s *Scanner) ReadNull() (any, error) {
+	value, err := s.readCRLFLine()
 	if err != nil {
-		return "", err
+		return nil, err
 	}
-	if len(value) > 0 {
-		return "", err
+	if value != "" {
+		return nil, fmt.Errorf("resp: invalid null")
 	}
-	return "", nil
+	return nil, nil
 }
 
 func (s *Scanner) ReadDouble() (float64, error) {
-	value, err := s.ReadLine()
+	value, err := s.readCRLFLine()
 	if err != nil {
 		return 0, err
 	}
@@ -71,7 +134,7 @@ func (s *Scanner) ReadDouble() (float64, error) {
 }
 
 func (s *Scanner) ReadBigNumber() (*big.Int, error) {
-	value, err := s.ReadLine()
+	value, err := s.readCRLFLine()
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +146,7 @@ func (s *Scanner) ReadBigNumber() (*big.Int, error) {
 }
 
 func (s *Scanner) ReadBoolean() (bool, error) {
-	value, err := s.ReadLine()
+	value, err := s.readCRLFLine()
 	if err != nil {
 		return false, err
 	}
@@ -123,6 +186,7 @@ func (s *Scanner) Read() (any, error) {
 
 	//$<length>\r\n<data>\r\n
 	case '$':
+		return s.ReadBulkString()
 
 	//*<number-of-elements>\r\n<element-1>...<element-n>
 	case '*':
@@ -145,10 +209,12 @@ func (s *Scanner) Read() (any, error) {
 
 	//!<length>\r\n<error>\r\n
 	case '!':
-
+		return s.ReadBulkError()
+		
 	// =<length>\r\n<encoding>:<data>\r\n
 	case '=':
-
+		return s.ReadVerbatimString()
+		
 	//%<number-of-entries>\r\n<key-1><value-1>...<key-n><value-n>
 	case '%':
 
