@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"slices"
 	"strconv"
 )
 
@@ -25,69 +26,6 @@ func (s *Scanner) readCRLFLine() (string, error) {
 		return "", fmt.Errorf("resp: invalid line coding")
 	}
 	return line[:len(line)-2], nil
-}
-
-func (s *Scanner) ReadBulkString() (string, error) {
-	lenStr, err := s.readCRLFLine()
-	if err != nil {
-		return "", err
-	}
-	n, err := strconv.Atoi(lenStr)
-	if err != nil {
-		return "", nil
-	}
-	if n == -1 {
-		return "",nil 
-	}
-	buf := make([]byte,n)
-	_,err = io.ReadFull(s.r,buf)
-	if err != nil{
-		return "",nil 
-	}
-	if _,err := s.readCRLFLine(); err != nil{
-		return "",err
-	}
-	return string(buf), nil
-}
-
-func (s *Scanner) ReadBulkError() (string, error) { 	
-	lenStr, err := s.readCRLFLine()
-		if err != nil {
-			return "", err
-		}
-		n, err := strconv.Atoi(lenStr)
-		if err != nil {
-			return "", nil
-		}	
-		buf := make([]byte,n)
-		_,err = io.ReadFull(s.r,buf)
-		if err != nil{
-			return "",nil 
-		}
-		if _,err := s.readCRLFLine(); err != nil{
-			return "",err
-		}
-		return string(buf), nil
-}
-
-func (s *Scanner) ReadVerbatimString() (string, error) { 
-	lenStr, err := s.readCRLFLine()
-	if err != nil{
-		return "",err 
-	}
-	n,err := strconv.Atoi(lenStr)
-	if err != nil{
-		return "", nil
-	}
-	buf := make([]byte,n)
-	_,err = io.ReadFull(s.r,buf)
-	if err != nil{
-		return "",nil
-	}
-	if _,err :=s.readCRLFLine(); err != nil{
-		return "",err 
-	}
-	return string(buf), nil
 }
 
 func (s *Scanner) ReadSimpleString() (string, error) {
@@ -163,6 +101,212 @@ func (s *Scanner) ReadBoolean() (bool, error) {
 	}
 }
 
+func (s *Scanner) ReadBulkString() (string, error) {
+	lenStr, err := s.readCRLFLine()
+	if err != nil {
+		return "", err
+	}
+	n, err := strconv.Atoi(lenStr)
+	if err != nil {
+		return "", err
+	}
+	if n == -1 {
+		return "", nil
+	}
+	buf := make([]byte, n)
+	_, err = io.ReadFull(s.r, buf)
+	if err != nil {
+		return "", err
+	}
+	if _, err := s.readCRLFLine(); err != nil {
+		return "", err
+	}
+	return string(buf), nil
+}
+
+func (s *Scanner) ReadBulkError() (string, error) {
+	lenStr, err := s.readCRLFLine()
+	if err != nil {
+		return "", err
+	}
+	n, err := strconv.Atoi(lenStr)
+	if err != nil {
+		return "", err
+	}
+	buf := make([]byte, n)
+	_, err = io.ReadFull(s.r, buf)
+	if err != nil {
+		return "", err
+	}
+	if _, err := s.readCRLFLine(); err != nil {
+		return "", err
+	}
+	return string(buf), nil
+}
+
+func (s *Scanner) ReadVerbatimString() (string, error) {
+	lenStr, err := s.readCRLFLine()
+	if err != nil {
+		return "", err
+	}
+	n, err := strconv.Atoi(lenStr)
+	if err != nil {
+		return "", err 
+	}
+	buf := make([]byte, n)
+	_, err = io.ReadFull(s.r, buf)
+	if err != nil {
+		return "", err
+	}
+	if _, err := s.readCRLFLine(); err != nil {
+		return "", err
+	}
+	return string(buf), nil
+}
+
+func (s *Scanner) ReadArray() (any, error) {
+	var buf []any
+	lenStr, err := s.readCRLFLine()
+	if err != nil {
+		return nil, err
+	}
+	n, err := strconv.Atoi(lenStr)
+	if err != nil {
+		return nil, err
+	}
+	// if array is empty
+	if n == 0 {
+		return make([]any, 0), nil
+	}
+	// if array is null
+	if n == -1 {
+		return nil, nil
+	}
+	for n != 0 {
+		val, err := s.Read()
+		if err != nil {
+			return nil, err
+		} else {
+			buf = append(buf, val)
+		}
+		n--
+	}
+	return buf, nil
+}
+
+func (s *Scanner) ReadMap() (any, error) {
+	var buf map[any]any = make(map[any]any)
+	lenStr, err := s.readCRLFLine()
+	if err != nil {
+		return nil, err
+	}
+	n, err := strconv.Atoi(lenStr)
+	if err != nil {
+		return nil, err
+	}
+	// if map is empty
+	if n == 0 {
+		return buf, nil
+	}
+	//%<number-of-entries>\r\n<key-1><value-1>...<key-n><value-n>
+	// I'm dealing with map and need to foucs on getting
+	// am dealing with n * 2 values and after each 2 iteration getting single pair
+	for n != 0 {
+		key, err := s.Read()
+		if err != nil {
+			return nil, err
+		}
+		val, err := s.Read()
+		if err != nil {
+			return nil, err
+		}
+		buf[key] = val
+		n--
+	}
+	return buf, nil
+}
+
+func (s *Scanner) ReadAttribute() (any, error) {
+	var buf map[any]any
+	lenStr, err := s.readCRLFLine()
+	if err != nil {
+		return nil, err
+	}
+	n, err := strconv.Atoi(lenStr)
+	if err != nil {
+		return nil, err
+	}
+	// if set is empty
+	if n == 0 {
+		return make(map[any]any, 0), nil
+	}
+	// if set is null
+	if n == -1 {
+		return nil, nil
+	}
+	for n != 0{
+		n--		
+	}
+	return buf, nil
+}
+
+func (s *Scanner) ReadSet() (any, error) {
+	var buf []any
+	lenStr, err := s.readCRLFLine()
+	if err != nil {
+		return nil, err
+	}
+	n, err := strconv.Atoi(lenStr)
+	if err != nil {
+		return nil, err
+	}
+	// if set is empty
+	if n == 0 {
+		return make([]any, 0), nil
+	}
+	// if set is null
+	if n == -1 {
+		return nil, nil
+	}
+	for n != 0 {
+		val, err := s.Read()
+		if err != nil {
+			return make([]any, 0), nil
+		} else if !slices.Contains(buf, val) {
+			buf = append(buf, val)
+		}
+		n--
+	}
+	return buf, nil
+}
+
+func (s *Scanner) ReadPush() (any, error) {
+	var buf []any
+	lenStr, err := s.readCRLFLine()
+	if err != nil {
+		return nil, err
+	}
+	n, err := strconv.Atoi(lenStr)
+	if err != nil {
+		return nil, err
+	}
+	// if set is empty
+	if n == 0 {
+		return make([]any, 0), nil
+	}
+
+	for n != 0 {
+		val, err := s.Read()
+		if err != nil {
+			return make([]any, 0), err
+		} else {
+			buf = append(buf, val)
+		}
+		n--
+	}
+	return buf, nil
+}
+
 func (s *Scanner) Read() (any, error) {
 	t, err := s.r.ReadByte()
 
@@ -190,6 +334,7 @@ func (s *Scanner) Read() (any, error) {
 
 	//*<number-of-elements>\r\n<element-1>...<element-n>
 	case '*':
+		return s.ReadArray()
 
 	//_\r\n
 	case '_':
@@ -210,13 +355,14 @@ func (s *Scanner) Read() (any, error) {
 	//!<length>\r\n<error>\r\n
 	case '!':
 		return s.ReadBulkError()
-		
+
 	// =<length>\r\n<encoding>:<data>\r\n
 	case '=':
 		return s.ReadVerbatimString()
-		
+
 	//%<number-of-entries>\r\n<key-1><value-1>...<key-n><value-n>
 	case '%':
+		return s.ReadMap()
 
 	/*|1\r\n
 	    +key-popularity\r\n
@@ -231,16 +377,16 @@ func (s *Scanner) Read() (any, error) {
 	    :2039123\r\n
 	    :9543892\r\n*/
 	case '|':
+		return s.ReadAttribute()
 
 	//~<number-of-elements>\r\n<element-1>...<element-n>
 	case '~':
+		return s.ReadSet()
 
 	//><number-of-elements>\r\n<element-1>...<element-n>
 	case '>':
-
+		return s.ReadPush()
 	default:
 		return nil, fmt.Errorf("unsupported RESP type: %q", t)
 	}
-
-	return nil, fmt.Errorf("resp: type %q not implemented", t)
 }
