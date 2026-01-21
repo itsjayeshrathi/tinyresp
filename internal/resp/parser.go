@@ -151,7 +151,7 @@ func (s *Scanner) ReadVerbatimString() (string, error) {
 	}
 	n, err := strconv.Atoi(lenStr)
 	if err != nil {
-		return "", err 
+		return "", err
 	}
 	buf := make([]byte, n)
 	_, err = io.ReadFull(s.r, buf)
@@ -227,7 +227,7 @@ func (s *Scanner) ReadMap() (any, error) {
 }
 
 func (s *Scanner) ReadAttribute() (any, error) {
-	var buf map[any]any
+	var buf map[any]any = make(map[any]any)
 	lenStr, err := s.readCRLFLine()
 	if err != nil {
 		return nil, err
@@ -236,16 +236,20 @@ func (s *Scanner) ReadAttribute() (any, error) {
 	if err != nil {
 		return nil, err
 	}
-	// if set is empty
 	if n == 0 {
 		return make(map[any]any, 0), nil
 	}
-	// if set is null
-	if n == -1 {
-		return nil, nil
-	}
-	for n != 0{
-		n--		
+	for n != 0 {
+		key, err := s.Read()
+		if err != nil {
+			return nil, err
+		}
+		val, err := s.Read()
+		if err != nil {
+			return nil, err
+		}
+		buf[key] = val
+		n--
 	}
 	return buf, nil
 }
